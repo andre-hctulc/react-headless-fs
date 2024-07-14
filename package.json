@@ -1,11 +1,16 @@
 {
-  "name": "@andre-hctulc/react-headless-fs",
-  "version": "0.0.1",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "André Thomas",
-  "license": "ISC"
+    "name": "@andre-hctulc/react-headless-fs",
+    "version": "0.0.1",
+    "description": "A headless React File System.",
+    "main": "dist/index.js",
+    "scripts": {
+        "tc": "tsc --noEmit",
+        "build": "tsc",
+        "watch": "tsc -w"
+    },
+    "author": "André Thomas",
+    "license": "ISC",
+    "dependencies": {
+        "react": "^18.3.1"
+    }
 }
