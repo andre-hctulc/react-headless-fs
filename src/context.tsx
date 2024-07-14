@@ -1,20 +1,21 @@
+"use client";
+
 import React from "react";
-import type { HFSConfig, HFSUI } from "./fs";
-import type { HFSApi } from "./adapter";
-import { HFSEvent, HFSEventData, HFSEventType } from "./event";
-import { HFSTree } from "./core";
-import { HeadBase } from "./types";
+import type { HFSConfig } from "./fs";
+import type { HFSApi } from "./api";
+import type { HFSEvent, HFSEventData, HFSEventType } from "./event";
+import type { HFSStatus, HeadBase } from "./types";
 
 interface HFSContext<H extends HeadBase = HeadBase, D = any> {
     api: HFSApi<H, D>;
     root: string;
-    on: <T extends HFSEventType>(type: T, listener: (event: HFSEvent<T, H, D>) => void) => void;
-    off: <T extends HFSEventType>(type: T, listener: (event: HFSEvent<T, H, D>) => void) => void;
-    dispatch: <T extends HFSEventType>(type: T, data: HFSEventData<T, H, D>) => void;
+    on: <T extends HFSEventType>(type: T, listener: (event: HFSEvent<T>) => void) => void;
+    off: <T extends HFSEventType>(type: T, listener: (event: HFSEvent<T>) => void) => void;
+    dispatch: <T extends HFSEventType>(type: T, ...data: HFSEventData<T>) => void;
     config: HFSConfig;
-    ui: HFSUI<H, D> | null;
     namespace: string | null;
-    tree: HFSTree<H>;
+    status: HFSStatus;
+    updateStatus: (status: HFSStatus | ((status: HFSStatus) => HFSStatus | void)) => void;
 }
 
 export const HFSContext = React.createContext<HFSContext | null>(null);

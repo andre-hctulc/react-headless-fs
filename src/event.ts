@@ -1,32 +1,16 @@
-import type { ApiEvents } from "./adapter";
-import { HeadBase } from "./types";
+import type { HFSEvents } from "./types";
 
-/**
- * @template H Header type
- * @template D Data type
- */
-export type HFSEvents<H extends HeadBase = HeadBase, D = any> = ApiEvents<H, D> & {};
-
-export type HFSEventData<T extends HFSEventType, H extends HeadBase = HeadBase, D = any> = HFSEvents<
-    H,
-    D
->[T] extends any[]
-    ? HFSEvents<H, D>[T]
-    : [];
+export type HFSEventData<T extends HFSEventType> = HFSEvents[T] extends any[] ? HFSEvents[T] : [];
 
 export type HFSEventType = keyof HFSEvents;
 
-export type HFSEventListener<
-    T extends HFSEventType = HFSEventType,
-    H extends HeadBase = HeadBase,
-    D = any
-> = (event: HFSEvent<T, H, D>) => void;
+export type HFSEventListener<T extends HFSEventType = HFSEventType> = (event: HFSEvent<T>) => void;
 
 /**
  * @template H Header type
  */
-export class HFSEvent<T extends HFSEventType = HFSEventType, H extends HeadBase = HeadBase, D = any> {
-    constructor(readonly type: T, readonly data: HFSEventData<T, H, D>) {}
+export class HFSEvent<T extends HFSEventType = HFSEventType> {
+    constructor(readonly type: T, readonly data: HFSEventData<T>) {}
 
     #defaultPrevented = false;
 

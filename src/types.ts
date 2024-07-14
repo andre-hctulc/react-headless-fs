@@ -1,10 +1,14 @@
-import React from "react";
+import type { Action } from "./api";
 
-interface HFSComponentBaseProps<H extends HeadBase = HeadBase, D = any> {}
-
-export type HFSComponent<P extends object> = React.ComponentType<P & HFSComponentBaseProps>;
-
-export type HFSSWRKey = { path: string; label: string; page?: number };
+export type HFSSWRKey = {
+    path: string | null;
+    label: string;
+    namespace: string | null;
+    stream?: boolean;
+    page?: number;
+    /** use for key shaping  */
+    options?: any;
+};
 
 export interface HeadBase {
     path: string;
@@ -16,6 +20,23 @@ export interface HeadBase {
  */
 export interface EntryStatus {
     open: boolean;
-    loading: boolean;
-    error: Error | null;
+    size: number;
+    fixed: boolean;
+    selected: boolean;
+    marked: boolean;
 }
+
+export interface HFSStatus {
+    entries: Record<string, Partial<EntryStatus>>;
+}
+
+export type HFSEvents = {
+    createNode: [path: string, oldPath?: string];
+    removeNode: [path: string, newPath?: string | null];
+    headChange: [path: string];
+    statusChange: [status: HFSStatus];
+    dataChange: [path: string];
+    childrenChange: [path: string | null];
+    actionStart: [path: string[] | null, action: Action, actionId: string];
+    actionFinish: [path: string[] | null, action: Action, actionId: string, error: Error | null];
+};

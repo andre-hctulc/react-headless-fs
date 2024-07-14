@@ -1,67 +1,57 @@
+"use client";
+
 import React from "react";
-import { HFSContext, useHFS } from "./context";
+import { HFSContext } from "./context";
 import { HFSEvent, HFSEventData, HFSEventListener, HFSEventType } from "./event";
-import { HFSAdapter, HFSApi } from "./adapter";
-import type { HeadBase, HFSComponent } from "./types";
-import { HSFDir, DirComponent } from "./dir";
-import type { EntryComponent } from "./entry";
-import { HFSTree } from "./core";
-import { useEvo, useHead } from "./hooks";
-import { capitalize } from "./system";
-
-type RootComponent<H extends HeadBase = HeadBase> = HFSComponent<{
-    head: H | null;
-    root: string;
-    children: React.ReactNode;
-}>;
-
-export type RootComponentProps<H extends HeadBase = HeadBase> = React.ComponentProps<RootComponent<H>>;
-
-export interface HFSUI<H extends HeadBase = HeadBase, D = any> {
-    dir: DirComponent<H>;
-    entry: EntryComponent<H>;
-    root: RootComponent<H>;
-}
+import { HFSAdapter, HFSApi } from "./api";
+import type { HFSStatus, HeadBase } from "./types";
+import { SWRConfig, SWRConfiguration } from "swr";
+import { capitalize, deepCopy } from "./system";
+import { useLocalStorage } from "usehooks-ts";
+import { useListener, useRevalidator } from "./hooks";
 
 type HFSEventProps<H extends HeadBase = HeadBase, D = any> = {
-    [T in HFSEventType as `on${Capitalize<T>}`]?: (...args: HFSEventData<T, H, D>) => void;
+    [T in HFSEventType as `on${Capitalize<T>}`]?: (...args: HFSEventData<T>) => void;
 };
 
 interface HFSProps<H extends HeadBase = HeadBase, D = any> extends HFSEventProps<H, D> {
     /** @default "/" */
     root?: string;
     adapter: HFSAdapter<H, D>;
-    ui?: HFSUI<H, D>;
     /** This config is merged with the default config */
     config?: Partial<HFSConfig>;
-    slots?: { after?: React.ReactNode; before?: React.ReactNode };
     namespace?: string;
     children?: React.ReactNode;
+    swrConfig?: SWRConfiguration;
 }
 
 export interface HFSConfig {
     /** @default 20 */
     pageSize: number;
+    initialStatus: HFSStatus;
+    /** @default true */
+    autoRevalidate: boolean;
 }
 
 const defaultConfig: HFSConfig = {
     pageSize: 20,
+    initialStatus: { entries: {} },
+    autoRevalidate: true,
 };
 
 export function HFS<H extends HeadBase = HeadBase, D = any>({
     adapter,
     root,
     config,
-    ui,
     namespace,
     children,
-    slots,
+    swrConfig,
     ...props
 }: HFSProps<H, D>) {
-    const listeners = React.useRef<Map<string, Set<HFSEventListener>>>(new Map());
+    const listeners = React.useRef<Map<string, Set<HFSEventListener<any>>>>(new Map());
     const conf = React.useMemo(() => ({ ...defaultConfig, ...config }), [config]);
     const dispatch = React.useCallback(
-        <T extends HFSEventType>(type: T, data: HFSEventData<any, any, any>) => {
+        <T extends HFSEventType>(type: T, ...data: HFSEventData<T>) => {
             const set = listeners.current.get(type);
             if (set) {
                 for (const listener of set) {
@@ -74,21 +64,41 @@ export function HFS<H extends HeadBase = HeadBase, D = any>({
         // eslint-disable-next-line react-hooks/exhaustive-deps
         []
     );
-    const on = React.useCallback((type: string, listener: HFSEventListener<any, any, any>) => {
+    const on = React.useCallback(<T extends HFSEventType>(type: T, listener: HFSEventListener<T>) => {
         const set = listeners.current.get(type) || new Set();
         set.add(listener);
         listeners.current.set(type, set);
     }, []);
-    const off = React.useCallback((type: string, listener: HFSEventListener<any, any, any>) => {
+    const off = React.useCallback(<T extends HFSEventType>(type: T, listener: HFSEventListener<T>) => {
         const set = listeners.current.get(type);
         if (set) set.delete(listener);
     }, []);
     const r = root ?? "/";
     const ns = namespace || null;
-    const tree = React.useMemo(() => new HFSTree<H>(r, null, [], true, { open: true }), [r]);
     const api = React.useMemo<HFSApi<H, D>>(() => {
-        return new HFSApi<H, D>(adapter, tree, dispatch);
-    }, [adapter, tree, dispatch]);
+        return new HFSApi<H, D>(adapter, dispatch);
+    }, [adapter, dispatch]);
+    const [status, setStatus] = useLocalStorage<HFSStatus>(
+        `$$hfs:${ns}:status`,
+        conf.initialStatus ?? { entries: {} }
+    );
+    const updateStatus = React.useCallback(
+        (status: HFSStatus | ((status: HFSStatus) => HFSStatus | void)) => {
+            setStatus((prev) => {
+                let newS: HFSStatus;
+                if (typeof status === "function") {
+                    prev = deepCopy(prev);
+                    const newStatus = status(prev);
+                    newS = newStatus ?? prev;
+                } else {
+                    newS = status;
+                }
+                dispatch("statusChange", newS);
+                return newS;
+            });
+        },
+        [setStatus, dispatch]
+    );
 
     React.useEffect(() => {
         const l = listeners.current;
@@ -98,48 +108,37 @@ export function HFS<H extends HeadBase = HeadBase, D = any>({
     }, []);
 
     return (
-        <HFSContext.Provider
-            value={{
-                root: r,
-                api: api as HFSApi<any, any>,
-                on,
-                off,
-                dispatch,
-                config: conf,
-                ui: (ui as HFSUI<any, any> | undefined) || null,
-                namespace: ns,
-                tree,
-            }}
-        >
-            <FSRoot root={r} slots={slots}>
+        <SWRConfig value={swrConfig}>
+            <HFSContext.Provider
+                value={{
+                    root: r,
+                    api: api as HFSApi<any, any>,
+                    on,
+                    off,
+                    dispatch,
+                    config: conf,
+                    namespace: ns,
+                    status,
+                    updateStatus,
+                }}
+            >
+                {conf.autoRevalidate && <AutoRevalidate />}
                 {children}
-            </FSRoot>
-        </HFSContext.Provider>
+            </HFSContext.Provider>
+        </SWRConfig>
     );
 }
 
-interface FSRootProps {
-    root: string;
-    slots?: { before?: React.ReactNode; after?: React.ReactNode };
-    children: React.ReactNode;
+function AutoRevalidate() {
+    const { revalidateDir, revalidateData, revalidateHead } = useRevalidator();
+    useListener("dataChange", (e) => {
+        revalidateData(e.data[0]);
+    });
+    useListener("childrenChange", (e) => {
+        revalidateDir(e.data[0]);
+    });
+    useListener("headChange", (e) => {
+        revalidateHead(e.data[0]);
+    });
+    return <></>;
 }
-
-const FSRoot: React.FC<FSRootProps> = ({ root, slots, children }) => {
-    const { ui, tree } = useHFS();
-    const evo = useEvo(root);
-    const head = useHead(root);
-    const Root = ui?.root;
-
-    return (
-        <>
-            ++{evo}++
-            {slots?.before}
-            {children}
-            {Root && (
-                <Root head={head} root={root}>
-                    {head && <HSFDir tree={tree} />}
-                </Root>
-            )}
-        </>
-    );
-};

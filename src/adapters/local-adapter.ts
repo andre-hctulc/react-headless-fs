@@ -1,4 +1,4 @@
-import { HFSAdapter, HFSApi, ListOptions, PostOptions } from "../adapter";
+import { HFSAdapter, HFSApi, ListOptions, PostOptions } from "../api";
 import { HeadBase } from "../types";
 
 export type LocalFS<H extends HeadBase = HeadBase, D = any> = {
@@ -14,8 +14,8 @@ export class LocalAdapter<H extends HeadBase = HeadBase, D = any> implements HFS
         this._target = target || { children: {}, data: undefined, head: { path: "/", isDir: true } as H };
     }
 
-    private _resolvePath(path: string): LocalFS<H> | null {
-        const parts = path.split("/");
+    private _resolvePath(path: string | null): LocalFS<H> | null {
+        const parts = path?.split("/") || [];
         let obj: any = this._target;
         for (const part of parts) {
             if (!part) continue;
@@ -29,7 +29,7 @@ export class LocalAdapter<H extends HeadBase = HeadBase, D = any> implements HFS
         return head;
     }
 
-    async list(path: string, options?: ListOptions): Promise<{ entries: H[]; hasNext: boolean }> {
+    async list(path: string | null, options?: ListOptions): Promise<{ entries: H[]; hasNext: boolean }> {
         const obj = this._resolvePath(path);
         if (obj) {
             return {
@@ -45,7 +45,7 @@ export class LocalAdapter<H extends HeadBase = HeadBase, D = any> implements HFS
         return obj ? obj.head : null;
     }
 
-    async rm(path: string): Promise<void> {
+    async remove(path: string): Promise<void> {
         const dir = HFSApi.dirName(path);
         const obj = this._resolvePath(dir);
         if (obj) delete (obj as any)[path];
