@@ -57,8 +57,9 @@ export function useEntries<H extends HeadBase>(
         },
         options.swr
     );
+    const isEmpty = query.data && query.data.entries.length === 0;
     const entries = React.useMemo(() => query.data?.entries || [], [query.data]);
-    return { ...query, entries };
+    return { ...query, entries, isEmpty };
 }
 
 export type UseEntriesStreamerOptions<H extends HeadBase = HeadBase> = {

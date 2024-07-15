@@ -15,8 +15,7 @@ type HFSEventProps<H extends HeadBase = HeadBase, D = any> = {
 };
 
 interface HFSProps<H extends HeadBase = HeadBase, D = any> extends HFSEventProps<H, D> {
-    /** @default "/" */
-    root?: string;
+    root: string;
     adapter: HFSAdapter<H, D>;
     /** This config is merged with the default config */
     config?: Partial<HFSConfig>;
@@ -73,7 +72,6 @@ export function HFS<H extends HeadBase = HeadBase, D = any>({
         const set = listeners.current.get(type);
         if (set) set.delete(listener);
     }, []);
-    const r = root ?? "/";
     const ns = namespace || null;
     const api = React.useMemo<HFSApi<H, D>>(() => {
         return new HFSApi<H, D>(adapter, dispatch);
@@ -111,7 +109,7 @@ export function HFS<H extends HeadBase = HeadBase, D = any>({
         <SWRConfig value={swrConfig}>
             <HFSContext.Provider
                 value={{
-                    root: r,
+                    root,
                     api: api as HFSApi<any, any>,
                     on,
                     off,

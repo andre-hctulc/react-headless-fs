@@ -52,7 +52,7 @@ export interface HFSAdapter<H extends HeadBase = HeadBase, D = any> {
     moveMany?: (from: string[], to: string[], options?: MoveOptions) => Promise<void>;
     copyMany?: (from: string[], to: string[], options?: CopyOptions) => Promise<void>;
     putHeads?: (newHeads: H[]) => Promise<void>;
-    extractDir?: (head: H | null) => string;
+    extractDir?: (head: H | null) => string | null;
 }
 
 export enum Action {
@@ -82,10 +82,8 @@ export class HFSApi<H extends HeadBase = HeadBase, D = any> {
         return "/" + parts.join("/");
     }
 
-    protected _extractDir?: (head: H | null) => string | null;
-
     extractDir(head: H | null): string | null {
-        return this._extractDir?.(head) ?? HFSApi.dirName(head?.path ?? "/");
+        return this._adapter.extractDir?.(head) ?? HFSApi.dirName(head?.path ?? "/");
     }
 
     constructor(
