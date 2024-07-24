@@ -2,8 +2,7 @@ import { useHFS } from "./context";
 import React from "react";
 import useSWR, { SWRConfiguration, useSWRConfig } from "swr";
 import useSWRInfinite, { SWRInfiniteConfiguration } from "swr/infinite";
-import type { EntryStatus, HeadBase, HFSSWRKey } from "./types";
-import type { GetOptions, ListOptions } from "./api";
+import type { EntryStatus, HeadBase, HFSSWRKey, GetOptions, ListOptions } from "./types";
 import type { HFSEvent, HFSEventListener, HFSEventType } from "./event";
 
 enum CACHE_LABEL {
@@ -47,7 +46,7 @@ export function useEntries<H extends HeadBase>(
               path,
               label: CACHE_LABEL.ENTRIES,
               stream: false,
-              options: [options.limit, options.start],
+              options: [options.limit, options.offset],
           }
         : null;
     const query = useSWR<{ entries: H[]; hasNext: boolean }, Error, HFSSWRKey | null>(
@@ -86,7 +85,7 @@ export function useEntriesStreamer<H extends HeadBase>(
             return { page: page, namespace, path, label: CACHE_LABEL.ENTRIES, stream: true };
         },
         ({ path, page }) => {
-            return api.list(path, { limit: config.pageSize, start: (page || 0) * config.pageSize });
+            return api.list(path, { limit: config.pageSize, offset: (page || 0) * config.pageSize });
         },
         options.swr
     );
